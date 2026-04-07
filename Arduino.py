@@ -1,63 +1,89 @@
 import serial
 import time
 import pydirectinput
-serialCom = serial.Serial('COM8', 9600)
 
-#Resets the Arduino at the start
+SERIAL_PORT = 'COM8'
+BAUD_RATE = 115200
+
+PRESS_THRESHOLD = 8.0
+RELEASE_THRESHOLD = 5.5
+
+# How long the signal must stay below RELEASE_THRESHOLD before keyUp
+RELEASE_DEBOUNCE_SEC = 0.12
+
+KEYS = ['w', 'a', 's', 'd']
+
+state = {
+    key: {
+        'is_pressed': False,
+        'below_since': None
+    }
+    for key in KEYS
+}
+
+def update_key(key, value, now):
+    s = state[key]
+
+    # Press immediately when threshold is exceeded
+    if not s['is_pressed']:
+        if value >= PRESS_THRESHOLD:
+            pydirectinput.keyDown(key)
+            s['is_pressed'] = True
+            s['below_since'] = None
+        return
+
+    # If already pressed, do not release instantly
+    if value > RELEASE_THRESHOLD:
+        s['below_since'] = None
+        return
+
+    # Value is below release threshold
+    if s['below_since'] is None:
+        s['below_since'] = now
+    elif now - s['below_since'] >= RELEASE_DEBOUNCE_SEC:
+        pydirectinput.keyUp(key)
+        s['is_pressed'] = False
+        s['below_since'] = None
+
+def release_all_keys():
+    for key in KEYS:
+        if state[key]['is_pressed']:
+            pydirectinput.keyUp(key)
+            state[key]['is_pressed'] = False
+            state[key]['below_since'] = None
+
+serialCom = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=0.1)
+
 serialCom.setDTR(False)
 time.sleep(1)
-serialCom.flushInput()
+serialCom.reset_input_buffer()
 serialCom.setDTR(True)
-wPressed = aPressed = sPressed = dPressed = False
-# pressThreshold = 10
-holdThreshold = 7.5
-pressed = False
-while(1):
+time.sleep(2)
 
-    binarySentence = serialCom.readline()
-    decodedSentence = binarySentence.decode('utf-8').strip('\r\n')
-    print(decodedSentence)
-    decodedSentence = decodedSentence.split()
-    movementTypes = [decodedSentence[0], decodedSentence[2], decodedSentence[4], decodedSentence[6]]
-    movementValues = [decodedSentence[1], decodedSentence[3], decodedSentence[5], decodedSentence[7]]
-    #Last word of the sentence
-    for index, value in enumerate(movementValues):
-        movementValues[index] = abs(float(value))
-    if movementValues[0] >= holdThreshold and wPressed is False:
-        pydirectinput.keyDown('W')
-        wPressed = True
-    elif movementValues[0] < holdThreshold and wPressed is True:
-        pydirectinput.keyUp('W')
-        wPressed = False
-    if movementValues[1] >= holdThreshold and aPressed is False:
-        pydirectinput.keyDown('A')
-        aPressed = True
-    elif movementValues[1] < holdThreshold and aPressed is True:
-        pydirectinput.keyUp('A')
-        aPressed = False
-    if movementValues[2] >= holdThreshold and sPressed is False:
-        pydirectinput.keyDown('S')
-        sPressed = True
-    elif movementValues[2] < holdThreshold and sPressed is True:
-        pydirectinput.keyUp('S')
-        sPressed = False
-    if movementValues[3] >= holdThreshold and dPressed is False:
-        pydirectinput.keyDown('D')
-        dPressed = True
-    elif movementValues[3] < holdThreshold and dPressed is True:
-        pydirectinput.keyUp('D')
-        dPressed = False
-    #     wLastValue = movementValue
-    # elif movementType == 'A':
-    #     print(movementValue - aLastValue)
-    #     if movementValue - aLastValue > pressThreshold:
-    #         keyboard.send('A')
-    #     aLastValue = movementValue
-    # elif movementType == 'S':
-    #     if movementValue - sLastValue > pressThreshold:
-    #         keyboard.send('S')
-    #     sLastValue = movementValue
-    # elif movementType == 'D':
-    #     if movementValue - dLastValue > pressThreshold:
-    #         keyboard.send('D')
-    #     dLastValue = movementValue
+try:
+    while True:
+        line = serialCom.readline().decode('utf-8', errors='ignore').strip()
+        if not line:
+            continue
+
+        parts = line.split(',')
+        if len(parts) != 4:
+            continue
+
+        try:
+            values = [abs(float(x)) for x in parts]
+        except ValueError:
+            continue
+
+        now = time.monotonic()
+
+        for key, value in zip(KEYS, values):
+            update_key(key, value, now)
+
+        print(dict(zip(KEYS, values)))
+
+except KeyboardInterrupt:
+    print("Stopping...")
+finally:
+    release_all_keys()
+    serialCom.close()
