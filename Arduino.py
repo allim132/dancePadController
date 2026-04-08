@@ -2,14 +2,16 @@ import serial
 import time
 import pydirectinput
 
+pydirectinput.PAUSE = 0
+
 SERIAL_PORT = 'COM8'
 BAUD_RATE = 115200
 
 PRESS_THRESHOLD = 8.0
 RELEASE_THRESHOLD = 5.5
 
-# How long the signal must stay below RELEASE_THRESHOLD before keyUp
-RELEASE_DEBOUNCE_SEC = 0.12
+# Lower this a lot for better responsiveness
+RELEASE_DEBOUNCE_SEC = 0.03
 
 KEYS = ['w', 'a', 's', 'd']
 
@@ -24,7 +26,6 @@ state = {
 def update_key(key, value, now):
     s = state[key]
 
-    # Press immediately when threshold is exceeded
     if not s['is_pressed']:
         if value >= PRESS_THRESHOLD:
             pydirectinput.keyDown(key)
@@ -32,12 +33,10 @@ def update_key(key, value, now):
             s['below_since'] = None
         return
 
-    # If already pressed, do not release instantly
     if value > RELEASE_THRESHOLD:
         s['below_since'] = None
         return
 
-    # Value is below release threshold
     if s['below_since'] is None:
         s['below_since'] = now
     elif now - s['below_since'] >= RELEASE_DEBOUNCE_SEC:
@@ -52,7 +51,7 @@ def release_all_keys():
             state[key]['is_pressed'] = False
             state[key]['below_since'] = None
 
-serialCom = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=0.1)
+serialCom = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=0.01)
 
 serialCom.setDTR(False)
 time.sleep(1)
@@ -80,7 +79,8 @@ try:
         for key, value in zip(KEYS, values):
             update_key(key, value, now)
 
-        print(dict(zip(KEYS, values)))
+        # Comment this out during gameplay testing
+        # print(dict(zip(KEYS, values)))
 
 except KeyboardInterrupt:
     print("Stopping...")
