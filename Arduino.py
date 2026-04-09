@@ -1,13 +1,14 @@
 import serial
 import time
 import uinput
+import csv
 
 SERIAL_PORT = '/dev/ttyACM0'   # /dev or /dev/ttyACM0
 BAUD_RATE = 115200
 
-PRESS_THRESHOLD = 8.0
-RELEASE_THRESHOLD = 20.0
-RELEASE_DEBOUNCE_SEC = 0.12
+PRESS_THRESHOLD = 0.02
+RELEASE_THRESHOLD = .25
+RELEASE_DEBOUNCE_SEC = 0.05
 
 KEYS = ['w', 'a', 's', 'd']
 
@@ -85,6 +86,10 @@ def open_serial():
 def main():
     serialCom = open_serial()
 
+    # Data
+    csv_file = open("sensor_data.csv", "w", newline="")
+    csv_writer = csv.writer(csv_file)
+    csv_writer.writerow(["time", "w", "a", "s", "d"])
     try:
         while True:
             raw = serialCom.readline()
@@ -99,7 +104,9 @@ def main():
 
             parts = line.split(' ')
             parts = parts[1::2]
-            print(parts)
+
+            
+            # print(parts)
             
             if len(parts) != 4:
                 print("hghfgzvbfhjgf ", raw)
@@ -113,16 +120,27 @@ def main():
 
             now = time.monotonic()
 
+            csv_writer.writerow([now] + values)
+            # Normalization through experimental data collection
+            values[0] = (values[0] - 0.7) / (500 - 0.7)
+            values[1] = (values[1] - 0.14) / (500 - 0.14)
+            values[2] = (values[2] - 0.1) / (350 - 0.1)
+            values[3] = (values[3] - 0.2) / (500 - 0.2)
+            
             for key, value in zip(KEYS, values):
                 update_key(key, value, now)
 
-            print(dict(zip(KEYS, values)))
+            #print(dict(zip(KEYS, values)))
+
+            active_keys = [key for key, value in zip(KEYS, values) if value >= PRESS_THRESHOLD]
+            print("RAW VALUES:", values, "ACTIVE:", active_keys)
 
     except KeyboardInterrupt:
         print("Stopping...")
     finally:
         release_all_keys()
         serialCom.close()
+        csv_file.close()
 
 if __name__ == "__main__":
     main()

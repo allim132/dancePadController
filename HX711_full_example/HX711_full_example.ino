@@ -3,17 +3,17 @@
 // AI improvements
 
 // Pin definitions
-const int HX711_dout1 = 3; // 3
-const int HX711_sck1  = 2; // 2
+const int HX711_dout1 = 9; // 3
+const int HX711_sck1  = 8; // 2
 // W
-const int HX711_dout2 = 5; // 3
-const int HX711_sck2  = 4; // 2
+const int HX711_dout2 = 3; // 3
+const int HX711_sck2  = 2; // 2
 // A
 const int HX711_dout3 = 7;
 const int HX711_sck3  = 6;
 // S
-const int HX711_dout4 = 9; // 5
-const int HX711_sck4  = 8; // 4
+const int HX711_dout4 = 5; // 5
+const int HX711_sck4  = 4; // 4
 // D
 
 // Calibration values: you should calibrate each sensor separately
