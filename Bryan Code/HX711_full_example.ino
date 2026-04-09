@@ -1,30 +1,31 @@
+/**
+ *
+ * HX711 library for Arduino - example file
+ * https://github.com/bogde/HX711
+ *
+ * MIT License
+ * (c) 2018 Bogdan Necula
+ *
+**/
 #include "HX711.h"
 
-// AI improvements
 
-// Pin definitions
-const int HX711_dout1 = 3; // 3
-const int HX711_sck1  = 2; // 2
-// W
-const int HX711_dout2 = 5; // 3
-const int HX711_sck2  = 4; // 2
-// A
-const int HX711_dout3 = 7;
-const int HX711_sck3  = 6;
-// S
-const int HX711_dout4 = 9; // 5
-const int HX711_sck4  = 8; // 4
-// D
+// HX711 circuit wiring
+const int HX711_dout1 = 3;
+const int HX711_sck1 = 2;
 
-// Calibration values: you should calibrate each sensor separately
-// const float SCALE_1 = 2280.0f;
-// const float SCALE_2 = 2280.0f;
-// const float SCALE_3 = 2280.0f;
-// const float SCALE_4 = 2280.0f;
+const int HX711_dout2 = 5; // Second Load Cell Data Pin
+const int HX711_sck2 = 4; // Second Load Cell Clock Pin
 
-// Smoothing factor: higher = smoother, but more latency
-const float ALPHA = 0.35f;
+const int HX711_dout3 = 7; // Third Load Cell Data Pin
+const int HX711_sck3 = 6; // Third Load Cell Clock Pin
 
+const int HX711_dout4 = 9; // Fourth Load Cell Data Pin
+const int HX711_sck4 = 8; // Fourth Load Cell Clock Pin
+
+
+
+const int threshold = 10; //Loadcell Threshold
 HX711 scale1;
 HX711 scale2;
 HX711 scale3;
@@ -32,7 +33,7 @@ HX711 scale4;
 
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   // Initialize library with data output pin, clock input pin and gain factor.
   // Channel selection is made by passing the appropriate gain:
   // - With a gain factor of 64 or 128, channel A is selected
@@ -63,3 +64,5 @@ void loop() {
   Serial.print(" A: ");
   Serial.println(scale4.get_units());
 }
+
+
